@@ -1,0 +1,32 @@
+{
+  "name": "telephony-socket-backend",
+  "version": "1.0.0",
+  "description": "Realtime socket backend for telephony/PBX proxy and call events.",
+  "main": "proxy_socket.ts",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "nodemon proxy_socket.ts"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@types/uuid": "^10.0.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.3"
+  },
+  "dependencies": {
+    "@types/cron": "^2.4.0",
+    "@types/http-proxy": "^1.17.14",
+    "@types/node-cron": "^3.0.11",
+    "dotenv": "^16.3.1",
+    "firebase-admin": "^12.0.0",
+    "http-proxy": "^1.18.1",
+    "moment": "^2.30.1",
+    "mongoose": "^8.0.4",
+    "node-cron": "^3.0.3",
+    "nodemon": "^3.0.2",
+    "socket.io": "^4.7.4",
+    "uuid": "^10.0.0"
+  }
+}
