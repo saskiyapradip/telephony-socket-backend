@@ -1,45 +1,52 @@
 import crypto from 'crypto';
 
+// NOTE: ciphertext format changed from a bare base64 string to
+// "<ivHex>:<cipherBase64>". A random IV is now generated per call instead of
+// being derived from the key (old code reused key bytes as the IV, which is
+// deterministic and leaks plaintext patterns - identical messages always
+// produced identical ciphertext).
+// IMPORTANT: values encrypted with the OLD version of this file cannot be
+// decrypted by this new version - they have no IV embedded. Existing
+// encrypted DB fields need a migration (decrypt with the old fixed-IV logic,
+// re-encrypt with this one) before this change ships.
+
 /**
  * Encrypt plaintext with AES-256-CBC (PKCS#5/PKCS#7 padding).
- * @param plaintext UTF-8 string or Buffer.
- * @param key 32-byte key.
- * @param iv 16-byte IV.
- * @returns Base64 ciphertext and Base64 IV.
+ * @param plaintext UTF-8 string.
+ * @param cid Key material (repeated/truncated to 32 bytes, as before).
+ * @returns "<ivHex>:<cipherBase64>"
  */
 export function encrypt(
   plaintext: string,
-  cid:string
+  cid: string
 ) {
-    let cidKey = `${cid}${cid}`;
-    const keyUtf8 = cidKey.substring(0,32) // length = 32 chars
-    const key = Buffer.from(keyUtf8, "utf8");
+  const cidKey = `${cid}${cid}`;
+  const keyUtf8 = cidKey.substring(0, 32); // length = 32 chars
+  const key = Buffer.from(keyUtf8, "utf8");
 
-    // Your custom 16-byte IV
-    const ivUtf8 = cidKey.substring(0,16); // length = 16 chars
-    const iv = Buffer.from(ivUtf8, "utf8");
+  const iv = crypto.randomBytes(16); // random IV per call
   const cipher = crypto.createCipheriv("aes-256-cbc", key, iv);
   const ct = Buffer.concat([cipher.update(plaintext, "utf8"), cipher.final()]);
-  return ct.toString("base64");
+  return `${iv.toString("hex")}:${ct.toString("base64")}`;
 }
 
 /**
- * Decrypt Base64 ciphertext with AES-256-CBC (PKCS#5/PKCS#7 padding).
- * @param ciphertextB64 Base64 ciphertext.
- * @param key 32-byte key.
- * @param iv 16-byte IV used for encryption.
+ * Decrypt ciphertext produced by encrypt() above.
+ * @param ciphertext "<ivHex>:<cipherBase64>"
+ * @param cid Key material (repeated/truncated to 32 bytes, as before).
  * @returns UTF-8 plaintext.
  */
-export function decrypt(ciphertextB64: string,cid:String): string {
+export function decrypt(ciphertext: string, cid: string): string {
+  const cidKey = `${cid}${cid}`;
+  const keyUtf8 = cidKey.substring(0, 32); // length = 32 chars
+  const key = Buffer.from(keyUtf8, "utf8");
 
-    let cidKey = `${cid}${cid}`;
-    const keyUtf8 = cidKey.substring(0,32) // length = 32 chars
-    const key = Buffer.from(keyUtf8, "utf8");
+  const [ivHex, ciphertextB64] = String(ciphertext).split(":");
+  if (!ivHex || !ciphertextB64) {
+    throw new Error("decrypt: malformed ciphertext (expected '<ivHex>:<cipherBase64>')");
+  }
+  const iv = Buffer.from(ivHex, "hex");
 
-    // Your custom 16-byte IV
-    const ivUtf8 = cidKey.substring(0,16); // length = 16 chars
-    const iv = Buffer.from(ivUtf8, "utf8");
-    
   const decipher = crypto.createDecipheriv("aes-256-cbc", key, iv);
   const pt = Buffer.concat([decipher.update(Buffer.from(ciphertextB64, "base64")), decipher.final()]);
   return pt.toString("utf8");

@@ -35,8 +35,9 @@ const sendPushNotification = async (title: any, body: any, myTokens: any, mydata
 			return response;
 		});
 	return sendadroidpush;
-	} catch (error:any) {
-	}
+	} catch (error: any) {
+      console.error("[sendPushNotification.ts] error:", error);
+    }
 }
 
 export default sendPushNotification;

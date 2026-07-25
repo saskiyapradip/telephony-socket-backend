@@ -19,11 +19,25 @@ import {decrypt,encrypt} from "./helper/encreptdecreptMessage";
 let io: any;
 let socket_users: any[] = [];
 
+// ALLOWED_ORIGINS should be a comma-separated list in .env, e.g.:
+// ALLOWED_ORIGINS=https://app.example.com,https://admin.example.com
+const allowedOrigins = (process.env.ALLOWED_ORIGINS || "")
+  .split(",")
+  .map((o) => o.trim())
+  .filter(Boolean);
+
 export const connect = async (server: any) => {
   io = new Server(server, {
     allowEIO3: true,
     cors: {
-      origin: true,
+      origin: (origin, callback) => {
+        // allow non-browser clients (no Origin header) and any explicitly allowed origin
+        if (!origin || allowedOrigins.includes(origin)) {
+          callback(null, true);
+        } else {
+          callback(new Error(`Origin ${origin} not allowed by CORS`));
+        }
+      },
       methods: ["GET", "POST"],
       credentials: true,
     },
